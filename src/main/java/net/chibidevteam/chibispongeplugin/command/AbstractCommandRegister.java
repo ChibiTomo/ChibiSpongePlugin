@@ -1,5 +1,6 @@
-package net.chibidevteam.chibispongeplugin.commands;
+package net.chibidevteam.chibispongeplugin.command;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import org.spongepowered.api.Sponge;
@@ -9,7 +10,7 @@ import net.chibidevteam.chibispongeplugin.ChibiSpongePlugin;
 import net.chibidevteam.chibispongeplugin.util.MessageUtils;
 
 public abstract class AbstractCommandRegister {
-    private Set<AbstractCommand> commands;
+    private Set<AbstractCommand> commands = new HashSet<>();
 
     private ChibiSpongePlugin    plugin;
 
@@ -17,7 +18,7 @@ public abstract class AbstractCommandRegister {
         try {
             addCommand(clazz.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
-            plugin.error(MessageUtils.get("commandRegister.error.cannotAdd"), e);
+            plugin.error(MessageUtils.get("commandRegister.error.cannotAdd", clazz), e);
         }
     }
 
@@ -34,6 +35,7 @@ public abstract class AbstractCommandRegister {
         for (AbstractCommand cmd : commands) {
             spec = cmd.build();
             Sponge.getCommandManager().register(plugin, spec, cmd.getAliases());
+            plugin.info(MessageUtils.get("commandRegister.registered", cmd.getAliases()[0]));
         }
     }
 

@@ -1,6 +1,9 @@
 package net.chibidevteam.chibispongeplugin;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
@@ -10,45 +13,94 @@ import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Event;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
+import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 
 import com.google.inject.Inject;
 
-import net.chibidevteam.chibispongeplugin.commands.AbstractCommandRegister;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
+import net.chibidevteam.chibispongeplugin.command.AbstractCommandRegister;
 
+/**
+ * This is an abstract class that make easy the creation of Plugins for Sponge
+ *
+ * @author ChibiTomo
+ *
+ */
 public abstract class ChibiSpongePlugin {
+    /**************************************************************************************************/
+    // Constants
+
+    private static final String              DEFAULT_CONF_FILE = "default.conf";
+    private static final String              MAIN_CONFIG_ID    = "CHIBI_SPONGE_PLUGIN_MAIN_CONF";
+
+    /**************************************************************************************************/
+    // Injects
 
     @Inject
     @ConfigDir(sharedRoot = false)
-    private Path                                            configDir;
+    private Path                             privateConfigDir;
 
     @Inject
     @DefaultConfig(sharedRoot = false)
-    private Path                                            defaultConfigDir;
+    private Path                             privateConfigFile;
 
     @Inject
-    @ConfigDir(sharedRoot = false)
-    private Path                                            sharedConfigDir;
+    @ConfigDir(sharedRoot = true)
+    private Path                             sharedConfigDir;
 
-    @Inject
-    @DefaultConfig(sharedRoot = true)
-    private Path                                            sharedDefaultConfigDir;
-
-    // Give us a configuration to work from
     @Inject
     @DefaultConfig(sharedRoot = true)
-    private ConfigurationLoader<CommentedConfigurationNode> configLoader;
+    private Path                             sharedConfigFile;
 
-    // These are all injected on plugin load for users to work from
-    @Inject
-    protected Logger                                        logger;
+    private Map<String, PluginConfiguration> configs           = new HashMap<>();
 
     @Inject
-    private Game                                            game;
+    protected Logger                         logger;
 
-    @Inject(optional = true)
-    private AbstractCommandRegister                         commandRegister;
+    @Inject
+    private Game                             game;
+
+    /**************************************************************************************************/
+    // Attibutes
+    private Path                             configDir;
+    private Path                             configFile;
+
+    /**************************************************************************************************/
+    // To override
+
+    /**
+     *
+     * @return true if the Plugin use the shared config dir
+     */
+    protected boolean useSharedConfig() {
+        return false;
+    }
+
+    /**
+     *
+     * @return the path to the main config file
+     */
+    protected String getDefaultConfAssetPath() {
+        return DEFAULT_CONF_FILE;
+    }
+
+    /**
+     * This method is called after adding the main config file. It is used to call
+     * more 'addConfiguration'
+     */
+    protected void addConfigurations() {
+    }
+
+    /**
+     *
+     * return the object implementing {@link AbstractCommandRegister} for this
+     * plugin
+     */
+    protected AbstractCommandRegister getCommandRegister() {
+        return null;
+    }
+
+    /**************************************************************************************************/
+    // Events
 
     protected void addEventListener(Object listener) {
         Sponge.getEventManager().registerListeners(this, listener);
@@ -66,55 +118,124 @@ public abstract class ChibiSpongePlugin {
         Sponge.getEventManager().post(e);
     }
 
-    /*
-     * LISTENERS
-     */
+    /**************************************************************************************************/
+    // Logging
+
+    public void info(String format, Object... objects) {
+        logger.info(format, objects);
+    }
+
+    public void warn(String format, Object... objects) {
+        logger.warn(format, objects);
+    }
+
+    public void error(String msg, Throwable e) {
+        logger.error(msg, e);
+    }
+
+    /**************************************************************************************************/
+    // Listeners
+
+    @Listener
+    public void preInit(GamePreInitializationEvent e) {
+        setupConfig();
+    }
 
     @Listener
     public void init(GameInitializationEvent e) {
+        AbstractCommandRegister commandRegister = getCommandRegister();
         if (commandRegister != null) {
             commandRegister.setPlugin(this);
             commandRegister.register();
         }
     }
 
-    /*
-     * LOGGING
+    /**************************************************************************************************/
+    // Setup
+
+    private void setupConfig() {
+        boolean useSharedConfig = useSharedConfig();
+        configDir = useSharedConfig ? sharedConfigDir : privateConfigDir;
+        configFile = useSharedConfig ? sharedConfigFile : privateConfigFile;
+
+        loadConfigs();
+        saveAllConfigs();
+    }
+
+    /**************************************************************************************************/
+    // Config
+
+    private void loadConfigs() {
+        addConfiguration(MAIN_CONFIG_ID, configFile, getDefaultConfAssetPath());
+        addConfigurations();
+    }
+
+    protected void addConfiguration(String name, String path) {
+        addConfiguration(name, path, null);
+    }
+
+    protected void addConfiguration(String name, String path, String jarUrl) {
+        addConfiguration(name, Paths.get(path), jarUrl);
+    }
+
+    protected void addConfiguration(String name, Path path, String jarUrl) {
+        PluginConfiguration pc = new PluginConfiguration(this, name, path, jarUrl);
+        configs.put(name, pc);
+    }
+
+    /**
+     * Save all the registered configurations
      */
-
-    public void error(String msg, Throwable e) {
-        logger.error(msg, e);
+    public void saveAllConfigs() {
+        for (PluginConfiguration pc : configs.values()) {
+            pc.save();
+        }
     }
 
-    /*
-     * GETTERS
+    /**
+     * Persist the main configuration
      */
-
-    public Path getConfigDir() {
-        return configDir;
+    public void saveMainConfig() {
+        saveConfig(MAIN_CONFIG_ID);
     }
 
-    public Path getDefaultConfigDir() {
-        return defaultConfigDir;
+    /**
+     * Persist the given config
+     *
+     * @param name
+     *            , the name of the configuration to save
+     */
+    public void saveConfig(String name) {
+        PluginConfiguration pc = configs.get(name);
+        if (pc != null) {
+            pc.save();
+        }
     }
 
-    public Path getSharedConfigDir() {
-        return sharedConfigDir;
-    }
+    /**************************************************************************************************/
+    // Getters
 
-    public Path getSharedDefaultConfigDir() {
-        return sharedDefaultConfigDir;
-    }
-
-    public ConfigurationLoader<CommentedConfigurationNode> getConfigLoader() {
-        return configLoader;
-    }
-
+    /**
+     *
+     * @return The Sponge Game instance
+     */
     public Game getGame() {
         return game;
     }
 
+    /**
+     *
+     * @return the plugin logger
+     */
     public Logger getLogger() {
         return logger;
+    }
+
+    /**
+     *
+     * @return configuration directory of this Plugin
+     */
+    public Path getConfigDir() {
+        return configDir;
     }
 }

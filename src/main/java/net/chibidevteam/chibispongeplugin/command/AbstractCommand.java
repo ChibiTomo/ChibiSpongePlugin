@@ -1,4 +1,4 @@
-package net.chibidevteam.chibispongeplugin.commands;
+package net.chibidevteam.chibispongeplugin.command;
 
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.parsing.InputTokenizer;
@@ -9,14 +9,14 @@ import org.spongepowered.api.text.Text;
 
 public abstract class AbstractCommand implements CommandExecutor {
 
-    protected String[]                 aliases;
-    protected CommandElement[]         arguments;
-    protected Text                     description;
-    protected Text                     extendedDescription;
-    protected String                   permission;
-    protected InputTokenizer           inputTokenizer;
+    protected String[]          aliases;
+    protected CommandElement[]  arguments;
+    protected Text              description;
+    protected Text              extendedDescription;
+    protected String            permission;
+    protected InputTokenizer    inputTokenizer;
 
-    protected static AbstractCommand[] children;
+    protected AbstractCommand[] children;
 
     protected CommandSpec build() {
         validate();

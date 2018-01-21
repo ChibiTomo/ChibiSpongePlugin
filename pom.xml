@@ -15,6 +15,7 @@
 	<properties>
 		<siteUrlSuffix>${project.version}</siteUrlSuffix>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<sponge.version>4.1.0</sponge.version>
 	</properties>
 
 	<prerequisites>
@@ -72,8 +73,6 @@
 	</profiles>
 
 	<build>
-
-
 		<resources>
 			<resource>
 				<directory>${project.basedir}/src/main/resources</directory>
@@ -120,7 +119,7 @@
 		<dependency>
 			<groupId>org.spongepowered</groupId>
 			<artifactId>spongeapi</artifactId>
-			<version>[3.0.0,3.1.0)</version>
+			<version>${sponge.version}</version>
 			<type>jar</type>
 			<scope>provided</scope>
 		</dependency>
