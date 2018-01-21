@@ -1,5 +1,6 @@
 package net.chibidevteam.chibispongeplugin;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -170,6 +171,14 @@ public abstract class ChibiSpongePlugin {
         addConfigurations();
     }
 
+    protected void addExternalConfiguration(String name, String path) {
+        addConfiguration(name, path, null);
+    }
+
+    protected void addExternalConfiguration(String name, String path, String jarUrl) {
+        addConfiguration(name, Paths.get(path), jarUrl);
+    }
+
     protected void addConfiguration(String name, String path) {
         addConfiguration(name, path, null);
     }
@@ -179,7 +188,27 @@ public abstract class ChibiSpongePlugin {
     }
 
     protected void addConfiguration(String name, Path path, String jarUrl) {
-        PluginConfiguration pc = new PluginConfiguration(this, name, path, jarUrl);
+        Path p = path;
+        if (!p.startsWith(configDir)) {
+            String sep = "";
+            if (!p.startsWith(File.separator) || !p.startsWith("/")) {
+                sep = File.separator;
+            }
+            p = Paths.get(configDir + sep + path);
+        }
+        addConf(name, p, jarUrl);
+    }
+
+    protected void addExternalConfiguration(String name, Path path, String jarUrl) {
+        addConf(name, path, jarUrl);
+    }
+
+    private void addConf(String name, Path path, String jarUrl) {
+        String ju = jarUrl;
+        while (ju.startsWith(File.separator) || ju.startsWith("/")) {
+            ju = ju.substring(1);
+        }
+        PluginConfiguration pc = new PluginConfiguration(this, name, path, ju);
         configs.put(name, pc);
     }
 

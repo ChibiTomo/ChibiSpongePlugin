@@ -69,7 +69,7 @@ public class PluginConfiguration {
 
     private void reloadDefault() {
         if (StringUtils.isBlank(jarUrl)) {
-            plugin.info(MessageUtils.get("config.noDefault", name));
+            plugin.info(MessageUtils.get("config.error.noDefault", name));
             return;
         }
         Optional<Asset> optional = Sponge.getAssetManager().getAsset(plugin, jarUrl);
@@ -79,7 +79,7 @@ public class PluginConfiguration {
                     .build();
             rootNode = load(loader, jarUrl);
         } else {
-            plugin.warn(MessageUtils.get("config.defaultNotFound", jarUrl));
+            plugin.warn(MessageUtils.get("config.error.defaultNotFound", jarUrl));
         }
     }
 
