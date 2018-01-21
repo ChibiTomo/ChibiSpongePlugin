@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
@@ -14,11 +15,17 @@ import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Event;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
+import org.spongepowered.api.event.game.state.GameLoadCompleteEvent;
+import org.spongepowered.api.event.game.state.GamePostInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 
 import com.google.inject.Inject;
 
 import net.chibidevteam.chibispongeplugin.command.AbstractCommandRegister;
+import net.chibidevteam.chibispongeplugin.exceptions.ChibiPluginException;
+import net.chibidevteam.chibispongeplugin.exceptions.ConfigurationNotFoundException;
+import net.chibidevteam.chibispongeplugin.exceptions.IOConfigurationException;
+import net.chibidevteam.chibispongeplugin.util.MessageUtils;
 
 /**
  * This is an abstract class that make easy the creation of Plugins for Sponge
@@ -30,7 +37,7 @@ public abstract class ChibiSpongePlugin {
     /**************************************************************************************************/
     // Constants
 
-    private static final String              DEFAULT_CONF_FILE = "default.conf";
+    private static final String              DEFAULT_CONF_FILE = "config.conf";
     private static final String              MAIN_CONFIG_ID    = "CHIBI_SPONGE_PLUGIN_MAIN_CONF";
 
     /**************************************************************************************************/
@@ -80,15 +87,17 @@ public abstract class ChibiSpongePlugin {
      *
      * @return the path to the main config file
      */
-    protected String getDefaultConfAssetPath() {
+    protected String getDefaultConfigFile() {
         return DEFAULT_CONF_FILE;
     }
 
     /**
      * This method is called after adding the main config file. It is used to call
      * more 'addConfiguration'
+     *
+     * @throws IOConfigurationException
      */
-    protected void addConfigurations() {
+    protected void addConfigurations() throws IOConfigurationException {
     }
 
     /**
@@ -96,8 +105,8 @@ public abstract class ChibiSpongePlugin {
      * return the object implementing {@link AbstractCommandRegister} for this
      * plugin
      */
-    protected AbstractCommandRegister getCommandRegister() {
-        return null;
+    protected Optional<AbstractCommandRegister> getCommandRegister() {
+        return Optional.empty();
     }
 
     /**************************************************************************************************/
@@ -139,22 +148,37 @@ public abstract class ChibiSpongePlugin {
 
     @Listener
     public void preInit(GamePreInitializationEvent e) {
-        setupConfig();
+        try {
+            setupConfig();
+        } catch (IOConfigurationException e1) {
+            error(MessageUtils.get("config.error.critical"), e1);
+        }
     }
 
     @Listener
-    public void init(GameInitializationEvent e) {
-        AbstractCommandRegister commandRegister = getCommandRegister();
-        if (commandRegister != null) {
+    public void init(GameInitializationEvent e) throws ChibiPluginException {
+        Optional<AbstractCommandRegister> optCommandRegister = getCommandRegister();
+        if (optCommandRegister.isPresent()) {
+            AbstractCommandRegister commandRegister = optCommandRegister.get();
             commandRegister.setPlugin(this);
             commandRegister.register();
         }
     }
 
-    /**************************************************************************************************/
+    @Listener
+    public void postInit(GamePostInitializationEvent e) throws ChibiPluginException {
+    }
+
+    @Listener
+    public void loadComplete(GameLoadCompleteEvent e) throws ChibiPluginException {
+    }
+
+    /**
+     * @throws IOConfigurationException
+     ************************************************************************************************/
     // Setup
 
-    private void setupConfig() {
+    private void setupConfig() throws IOConfigurationException {
         boolean useSharedConfig = useSharedConfig();
         configDir = useSharedConfig ? sharedConfigDir : privateConfigDir;
         configFile = useSharedConfig ? sharedConfigFile : privateConfigFile;
@@ -163,31 +187,33 @@ public abstract class ChibiSpongePlugin {
         saveAllConfigs();
     }
 
-    /**************************************************************************************************/
+    /**
+     * @throws IOConfigurationException
+     ************************************************************************************************/
     // Config
 
-    private void loadConfigs() {
-        addConfiguration(MAIN_CONFIG_ID, configFile, getDefaultConfAssetPath());
+    private void loadConfigs() throws IOConfigurationException {
+        addConfiguration(MAIN_CONFIG_ID, configFile, getDefaultConfigFile());
         addConfigurations();
     }
 
-    protected void addExternalConfiguration(String name, String path) {
+    protected void addExternalConfiguration(String name, String path) throws IOConfigurationException {
         addConfiguration(name, path, null);
     }
 
-    protected void addExternalConfiguration(String name, String path, String jarUrl) {
+    protected void addExternalConfiguration(String name, String path, String jarUrl) throws IOConfigurationException {
         addConfiguration(name, Paths.get(path), jarUrl);
     }
 
-    protected void addConfiguration(String name, String path) {
+    protected void addConfiguration(String name, String path) throws IOConfigurationException {
         addConfiguration(name, path, null);
     }
 
-    protected void addConfiguration(String name, String path, String jarUrl) {
+    protected void addConfiguration(String name, String path, String jarUrl) throws IOConfigurationException {
         addConfiguration(name, Paths.get(path), jarUrl);
     }
 
-    protected void addConfiguration(String name, Path path, String jarUrl) {
+    protected void addConfiguration(String name, Path path, String jarUrl) throws IOConfigurationException {
         Path p = path;
         if (!p.startsWith(configDir)) {
             String sep = "";
@@ -199,11 +225,11 @@ public abstract class ChibiSpongePlugin {
         addConf(name, p, jarUrl);
     }
 
-    protected void addExternalConfiguration(String name, Path path, String jarUrl) {
+    protected void addExternalConfiguration(String name, Path path, String jarUrl) throws IOConfigurationException {
         addConf(name, path, jarUrl);
     }
 
-    private void addConf(String name, Path path, String jarUrl) {
+    private void addConf(String name, Path path, String jarUrl) throws IOConfigurationException {
         String ju = jarUrl;
         while (ju.startsWith(File.separator) || ju.startsWith("/")) {
             ju = ju.substring(1);
@@ -214,8 +240,10 @@ public abstract class ChibiSpongePlugin {
 
     /**
      * Save all the registered configurations
+     *
+     * @throws IOConfigurationException
      */
-    public void saveAllConfigs() {
+    public void saveAllConfigs() throws IOConfigurationException {
         for (PluginConfiguration pc : configs.values()) {
             pc.save();
         }
@@ -223,8 +251,10 @@ public abstract class ChibiSpongePlugin {
 
     /**
      * Persist the main configuration
+     *
+     * @throws IOConfigurationException
      */
-    public void saveMainConfig() {
+    public void saveMainConfig() throws IOConfigurationException {
         saveConfig(MAIN_CONFIG_ID);
     }
 
@@ -233,12 +263,26 @@ public abstract class ChibiSpongePlugin {
      *
      * @param name
      *            , the name of the configuration to save
+     * @throws IOConfigurationException
      */
-    public void saveConfig(String name) {
-        PluginConfiguration pc = configs.get(name);
-        if (pc != null) {
-            pc.save();
+    public void saveConfig(String name) throws IOConfigurationException {
+        try {
+            getConfig(name).save();
+        } catch (ConfigurationNotFoundException e) {
+            throw new IOConfigurationException(MessageUtils.get("config.error.cannotSave", name), e);
         }
+    }
+
+    public PluginConfiguration getConfig(String name) throws ConfigurationNotFoundException {
+        PluginConfiguration pc = configs.get(name);
+        if (pc == null) {
+            throw new ConfigurationNotFoundException(MessageUtils.get("config.error.notRegistered"));
+        }
+        return pc;
+    }
+
+    public boolean usePermissions() throws ConfigurationNotFoundException {
+        return getConfig(MAIN_CONFIG_ID).getBoolean("plugin", "usePermissions");
     }
 
     /**************************************************************************************************/

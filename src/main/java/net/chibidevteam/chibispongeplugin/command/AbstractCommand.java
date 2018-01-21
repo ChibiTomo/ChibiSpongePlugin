@@ -1,11 +1,14 @@
 package net.chibidevteam.chibispongeplugin.command;
 
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.parsing.InputTokenizer;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.command.spec.CommandSpec.Builder;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
 
 public abstract class AbstractCommand implements CommandExecutor {
 
@@ -18,6 +21,10 @@ public abstract class AbstractCommand implements CommandExecutor {
 
     protected AbstractCommand[] children;
 
+    private static boolean      usesPermissions;
+
+    protected abstract String getHelp();
+
     protected CommandSpec build() {
         validate();
 
@@ -29,7 +36,7 @@ public abstract class AbstractCommand implements CommandExecutor {
         if (extendedDescription != null) {
             builder.extendedDescription(extendedDescription);
         }
-        if (permission != null) {
+        if (usesPermissions && permission != null) {
             builder.permission(permission);
         }
         if (inputTokenizer != null) {
@@ -49,6 +56,10 @@ public abstract class AbstractCommand implements CommandExecutor {
         return builder.executor(this).build();
     }
 
+    protected void printHelp(CommandSource src, CommandContext ctx) {
+        src.sendMessage(Text.of(TextColors.YELLOW, getHelp()));
+    }
+
     private void validate() {
         if (aliases == null || aliases.length < 1) {
             throw new RuntimeException();
@@ -61,5 +72,13 @@ public abstract class AbstractCommand implements CommandExecutor {
 
     public AbstractCommand[] getChildren() {
         return children;
+    }
+
+    public static boolean isUsesPermissions() {
+        return usesPermissions;
+    }
+
+    public static void setUsesPermissions(boolean usesPermissions) {
+        AbstractCommand.usesPermissions = usesPermissions;
     }
 }

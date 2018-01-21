@@ -7,6 +7,8 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.spec.CommandSpec;
 
 import net.chibidevteam.chibispongeplugin.ChibiSpongePlugin;
+import net.chibidevteam.chibispongeplugin.exceptions.ConfigurationNotFoundException;
+import net.chibidevteam.chibispongeplugin.exceptions.CriticalPluginErrorException;
 import net.chibidevteam.chibispongeplugin.util.MessageUtils;
 
 public abstract class AbstractCommandRegister {
@@ -39,8 +41,13 @@ public abstract class AbstractCommandRegister {
         }
     }
 
-    public void setPlugin(ChibiSpongePlugin plugin) {
+    public void setPlugin(ChibiSpongePlugin plugin) throws CriticalPluginErrorException {
         this.plugin = plugin;
+        try {
+            AbstractCommand.setUsesPermissions(plugin.usePermissions());
+        } catch (ConfigurationNotFoundException e) {
+            throw new CriticalPluginErrorException(e);
+        }
     }
 
 }
