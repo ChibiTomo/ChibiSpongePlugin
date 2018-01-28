@@ -38,7 +38,7 @@ public abstract class ChibiSpongePlugin {
     // Constants
 
     private static final String              DEFAULT_CONF_FILE = "config.conf";
-    private static final String              MAIN_CONFIG_ID    = "CHIBI_SPONGE_PLUGIN_MAIN_CONF";
+    public static final String               MAIN_CONFIG_ID    = "CHIBI_SPONGE_PLUGIN_MAIN_CONF";
 
     /**************************************************************************************************/
     // Injects

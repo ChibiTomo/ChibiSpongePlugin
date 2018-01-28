@@ -73,7 +73,7 @@ public class PluginConfiguration {
     }
 
     public void set(String key, Object value) {
-        Object[] keys = key.split(".");
+        Object[] keys = key.split("\\.");
         getNode(keys).setValue(value);
     }
 

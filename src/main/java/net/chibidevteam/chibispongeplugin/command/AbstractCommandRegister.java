@@ -16,7 +16,16 @@ public abstract class AbstractCommandRegister {
 
     private ChibiSpongePlugin    plugin;
 
-    protected void addCommand(Class<? extends AbstractCommand> clazz) {
+    public final void setPlugin(ChibiSpongePlugin plugin) throws CriticalPluginErrorException {
+        this.plugin = plugin;
+        try {
+            AbstractCommand.setUsesPermissions(plugin.usePermissions());
+        } catch (ConfigurationNotFoundException e) {
+            throw new CriticalPluginErrorException(e);
+        }
+    }
+
+    protected final void addCommand(Class<? extends AbstractCommand> clazz) {
         try {
             addCommand(clazz.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
@@ -24,29 +33,21 @@ public abstract class AbstractCommandRegister {
         }
     }
 
-    protected void addCommand(AbstractCommand cmd) {
+    protected final void addCommand(AbstractCommand cmd) {
         commands.add(cmd);
     }
 
     protected abstract void setCommands();
 
-    public void register() {
+    public final void register() throws CriticalPluginErrorException {
         setCommands();
 
         CommandSpec spec;
         for (AbstractCommand cmd : commands) {
+            cmd.setPlugin(plugin);
             spec = cmd.build();
             Sponge.getCommandManager().register(plugin, spec, cmd.getAliases());
             plugin.info(MessageUtils.get("commandRegister.registered", cmd.getAliases()[0]));
-        }
-    }
-
-    public void setPlugin(ChibiSpongePlugin plugin) throws CriticalPluginErrorException {
-        this.plugin = plugin;
-        try {
-            AbstractCommand.setUsesPermissions(plugin.usePermissions());
-        } catch (ConfigurationNotFoundException e) {
-            throw new CriticalPluginErrorException(e);
         }
     }
 

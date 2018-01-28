@@ -81,10 +81,10 @@ public class MessageUtils {
         return text + StringUtils.join(array, ", ");
     }
 
-    public static Text getText(String key) {
+    public static Text getText(String key, Object... objects) {
         Text txt = txtCache.get(key);
         if (txt == null) {
-            txt = Text.of(get(key));
+            txt = Text.of(get(key, objects));
             txtCache.put(key, txt);
         }
         return txt;
